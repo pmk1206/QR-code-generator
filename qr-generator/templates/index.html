@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Code Generator</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <h1><span>QR</span> Code Generator</h1>
+      <p>Enter a link or text and generate a QR code.</p>
+    </header>
+
+    <section class="grid">
+      <section class="panel">
+        <h2>Your link or text</h2>
+        <form id="qr-form">
+          <label for="qr-input">Website URL or text</label>
+          <input id="qr-input" name="text" type="text" placeholder="https://example.com" maxlength="2500" required />
+          <button class="btn" id="generate-btn" type="submit">Generate QR</button>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Your QR code</h2>
+        <div class="qr-frame" id="qr-frame">
+          <div class="empty-state" id="empty-state">Ready when you are</div>
+          <img id="qr-image" alt="Generated QR code" hidden />
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="download-btn" type="button" disabled>Download PNG</button>
+          <button class="btn btn-secondary" id="reset-btn" type="button">Reset</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("qr-form");
+    const input = document.getElementById("qr-input");
+    const generateBtn = document.getElementById("generate-btn");
+    const downloadBtn = document.getElementById("download-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    const qrImage = document.getElementById("qr-image");
+    const emptyState = document.getElementById("empty-state");
+    const status = document.getElementById("status");
+
+    let currentQrData = "";
+
+    function setStatus(message = "", type = "") {
+      status.textContent = message;
+      status.className = `status ${type}`.trim();
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+
+      if (!text) {
+        setStatus("Please enter a link or some text first.", "error");
+        input.focus();
+        return;
+      }
+
+      generateBtn.disabled = true;
+      setStatus("Creating your QR code…");
+
+      try {
+        const response = await fetch("/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Something went wrong.");
+
+        currentQrData = result.image;
+        qrImage.src = currentQrData;
+        qrImage.hidden = false;
+        emptyState.hidden = true;
+        downloadBtn.disabled = false;
+        setStatus("QR code generated successfully.", "success");
+      } catch (e) {
+        setStatus(e.message || "Could not connect to the server.", "error");
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      if (!currentQrData) return;
+      const a = document.createElement("a");
+      a.href = currentQrData;
+      a.download = "qr-code.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      form.reset();
+      currentQrData = "";
+      qrImage.removeAttribute("src");
+      qrImage.hidden = true;
+      emptyState.hidden = false;
+      downloadBtn.disabled = true;
+      setStatus("");
+      input.focus();
+    });
+  </script>
+</body>
+</html>
