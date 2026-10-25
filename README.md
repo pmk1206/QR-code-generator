@@ -1,2 +1,2 @@
 # QR-code-generator
-it helps t generate qr code of any deployed link 
+it helps to generate qr code of any deployed link 
